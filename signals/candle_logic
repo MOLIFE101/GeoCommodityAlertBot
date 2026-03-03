@@ -1,0 +1,22 @@
+import pandas as pd
+import numpy as np
+
+def check_trend(candles: pd.Series, min_candles=5, threshold_pct=3):
+    """
+    candles: Series of closing prices
+    min_candles: min consecutive candles to validate signal
+    threshold_pct: % move for signal
+    """
+    if len(candles) < min_candles:
+        return False, 0
+
+    # Calculate % change each day
+    pct_change = candles.pct_change() * 100
+    last_candles = pct_change[-min_candles:]
+
+    # Trend confirmation: all positive or negative above threshold
+    if all(last_candles > threshold_pct):
+        return True, last_candles.sum()
+    elif all(last_candles < -threshold_pct):
+        return True, last_candles.sum()
+    return False, last_candles.sum()
