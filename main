@@ -1,0 +1,36 @@
+import yfinance as yf
+import pandas as pd
+from watchlist import WATCHLIST, CANDLE_PERIOD, MIN_CANDLES
+from signals.candle_logic import check_trend
+from utils.alerts import send_alert
+
+def evaluate_layer(layer_name, tickers):
+    score = 0
+    for ticker in tickers:
+        try:
+            data = yf.download(ticker, period=f"{MIN_CANDLES+5}d", interval=CANDLE_PERIOD)
+            if len(data) < MIN_CANDLES:
+                continue
+            close = data["Close"]
+            signal, signal_strength = check_trend(close, min_candles=MIN_CANDLES)
+            if signal:
+                score += signal_strength
+                send_alert(f"[{layer_name}] Signal: {ticker} moved strongly, cumulative: {signal_strength:.2f}%")
+        except Exception as e:
+            print(f"Error fetching {ticker}: {e}")
+    return score
+
+def main():
+    total_score = 0
+    for layer, tickers in WATCHLIST.items():
+        layer_score = evaluate_layer(layer, tickers)
+        print(f"{layer} score: {layer_score:.2f}")
+        total_score += layer_score
+
+    if total_score > 10:
+        send_alert(f"🔥 GeoCommodity Alert! Total Knock-on Score: {total_score:.2f}")
+    else:
+        print(f"Total Score: {total_score:.2f} — No major signal.")
+
+if __name__ == "__main__":
+    main()
